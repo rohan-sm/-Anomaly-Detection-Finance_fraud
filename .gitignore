@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (generated)
+data/raw/transactions.csv
+data/processed/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
