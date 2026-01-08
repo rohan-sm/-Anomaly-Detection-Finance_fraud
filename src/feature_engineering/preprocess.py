@@ -1,28 +1,37 @@
-import json
 import pandas as pd
-from src.feature_engineering.temporal_features import add_temporal_features
-from src.feature_engineering.spatial_features import add_spatial_features
+from pathlib import Path
+
 from src.feature_engineering.behavioral_features import add_behavioral_features
 
-RAW_PATH = "data/raw/transactions_raw.csv"
-OUT_PATH = "data/processed/transactions_features.csv"
-CITY_COORDS_PATH = "data/metadata/city_coordinates.json"
+BASE_DIR = Path(__file__).resolve()
+while BASE_DIR.name != "fraud-anamoly-detection":
+    BASE_DIR = BASE_DIR.parent
+
+RAW_PATH = BASE_DIR / "data" / "raw" / "transactions_raw.csv"
+OUT_PATH = BASE_DIR / "data" / "processed" / "transactions_features.csv"
 
 def run_feature_engineering():
+    print(f"[INFO] Loading: {RAW_PATH}")
+
     df = pd.read_csv(RAW_PATH)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-    with open(CITY_COORDS_PATH) as f:
-        city_coords = json.load(f)
-
-    df = add_temporal_features(df)
-    df = add_spatial_features(df, city_coords)
+    # Behavioral / velocity features
     df = add_behavioral_features(df)
 
-    # Drop leakage columns
-    df = df.drop(columns=["timestamp", "is_fraud"], errors="ignore")
+    # Drop leakage / non-model columns
+    df = df.drop(
+        columns=[
+            "transaction_id",
+            "card_number",
+            "timestamp",
+            "fraud_type"
+        ],
+        errors="ignore"
+    )
 
     df.to_csv(OUT_PATH, index=False)
-    print(f"[OK] Feature dataset saved to {OUT_PATH}")
+    print(f"[SUCCESS] Saved → {OUT_PATH}")
 
 if __name__ == "__main__":
     run_feature_engineering()

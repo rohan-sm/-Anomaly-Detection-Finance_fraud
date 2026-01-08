@@ -1,42 +1,45 @@
-#Fraud = velocity + deviation --> (used by Stripe, Visa, PayPal)
-
 import pandas as pd
 
 def add_behavioral_features(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.sort_values(["customer_id", "timestamp"])
+    # Always work on sorted data
+    df = df.sort_values(["customer_id", "timestamp"]).reset_index(drop=True)
 
     # Time since last transaction
-    df["prev_txn_time"] = df.groupby("customer_id")["timestamp"].shift(1)
+    prev_time = df.groupby("customer_id")["timestamp"].shift(1)
     df["time_since_last_txn_sec"] = (
-        df["timestamp"] - df["prev_txn_time"]
+        df["timestamp"] - prev_time
     ).dt.total_seconds().fillna(0)
 
-    # Velocity features
-    df["txn_count_1h"] = (
-        df.groupby("customer_id")["timestamp"]
-        .rolling("1H")
-        .count()
-        .reset_index(level=0, drop=True)
-        .fillna(0)
+    # Rolling transaction counts (POSITIONAL assignment – critical)
+    txn_count_1h = (
+        df.groupby("customer_id")
+          .rolling("1h", on="timestamp")["transaction_id"]
+          .count()
+          .reset_index(drop=True)
+          .values
     )
 
-    df["txn_count_24h"] = (
-        df.groupby("customer_id")["timestamp"]
-        .rolling("24H")
-        .count()
-        .reset_index(level=0, drop=True)
-        .fillna(0)
+    txn_count_24h = (
+        df.groupby("customer_id")
+          .rolling("24h", on="timestamp")["transaction_id"]
+          .count()
+          .reset_index(drop=True)
+          .values
     )
 
-    # Amount behavior
-    df["avg_amount_24h"] = (
-        df.groupby("customer_id")["amount"]
-        .rolling("24H")
-        .mean()
-        .reset_index(level=0, drop=True)
-        .fillna(df["amount"])
+    avg_amount_24h = (
+        df.groupby("customer_id")
+          .rolling("24h", on="timestamp")["amount"]
+          .mean()
+          .reset_index(drop=True)
+          .values
     )
 
+    df["txn_count_1h"] = txn_count_1h
+    df["txn_count_24h"] = txn_count_24h
+    df["avg_amount_24h"] = avg_amount_24h
+
+    # Amount deviation from recent behavior
     df["amount_deviation"] = df["amount"] - df["avg_amount_24h"]
 
-    return df.drop(columns=["prev_txn_time"])
+    return df
