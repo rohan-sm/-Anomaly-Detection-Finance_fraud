@@ -10,7 +10,7 @@ venv/
 .ipynb_checkpoints/
 
 # Data (generated)
-data/raw/transactions.csv
+
 data/processed/
 
 # OS
