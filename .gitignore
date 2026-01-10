@@ -11,7 +11,7 @@ venv/
 
 # Data (generated)
 
-data/processed/
+
 
 # OS
 .DS_Store
