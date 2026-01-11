@@ -5,3 +5,4 @@ fastapi
 uvicorn
 geopy
 matplotlib
+joblib

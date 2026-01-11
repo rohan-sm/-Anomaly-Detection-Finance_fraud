@@ -1,0 +1,6 @@
+{
+  "isolation_forest": {
+    "percentile": 1,
+    "threshold_value": -3.866395707794541e-17
+  }
+}
