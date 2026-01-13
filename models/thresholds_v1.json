@@ -2,5 +2,13 @@
   "isolation_forest": {
     "percentile": 1,
     "threshold_value": -3.866395707794541e-17
+  },
+  "one_class_svm": {
+    "percentile": 1,
+    "threshold_value": -0.00011051983494503758
+  },
+  "autoencoder": {
+    "percentile": 99,
+    "threshold_value": 0.010299235092751083
   }
 }

@@ -6,3 +6,4 @@ uvicorn
 geopy
 matplotlib
 joblib
+tensorflow
