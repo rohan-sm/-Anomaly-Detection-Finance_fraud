@@ -6,20 +6,29 @@ from src.feature_engineering.behavioral_features import add_behavioral_features
 
 
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Shared feature engineering logic for BOTH training and inference
-    """
     df = df.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-    # Behavioral / velocity features
+
+    # Columns used by behavioral_features.py
+    defaults = {
+        "transaction_id": "API_TXN",
+        "merchant_lat": 0.0,
+        "merchant_long": 0.0,
+    }
+
+    for col, default_val in defaults.items():
+        if col not in df.columns:
+            df[col] = default_val
+
+    # Feature engineering (shared)
     df = add_behavioral_features(df)
 
-    # Log-transform amount deviation (used by Isolation Forest)
+    # Log-transform amount deviation
     df["amount_dev_log"] = np.sign(df["amount_deviation"]) * np.log1p(
         np.abs(df["amount_deviation"])
     )
-    df = df.drop(columns=["amount_deviation"])
+    df = df.drop(columns=["amount_deviation"], errors="ignore")
 
     # Drop leakage / non-model columns
     df = df.drop(
@@ -27,12 +36,13 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
             "transaction_id",
             "card_number",
             "timestamp",
-            "fraud_type"
+            "fraud_type",
         ],
-        errors="ignore"
+        errors="ignore",
     )
 
     return df
+
 
 
 # ---------------- BATCH PIPELINE (UNCHANGED) ----------------

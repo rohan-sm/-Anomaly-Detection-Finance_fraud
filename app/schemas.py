@@ -1,11 +1,13 @@
+from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Dict
 
 class TransactionRequest(BaseModel):
-    features: Dict[str, float] = Field(
-        ..., 
-        example={"amount": 5000.0, "hour": 14, "distance_from_home": 12.5}
-    )
+    customer_id: str
+    amount: float
+    timestamp: datetime
+    hour: int
+    distance_from_home: float
 
 class PredictionResponse(BaseModel):
     fraud_score: float
