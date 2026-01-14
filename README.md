@@ -19,20 +19,6 @@ Because of this, treating fraud detection as a **supervised classification probl
 
 ---
 
-## 🧠 Why Isolation Forest?
-
-Multiple anomaly detection approaches were experimented with during development.
-
-**Isolation Forest was chosen for the final system because:**
-- It performed **most consistently** on validation data
-- It scales well to large transaction volumes
-- It works naturally with **tabular financial features**
-- It provides a clear anomaly score that can be converted into a fraud probability
-
-Rather than overengineering, the final system uses **one strong, explainable model**.
-
----
-
 ## 🏗️ System Architecture
 
 
@@ -114,18 +100,15 @@ Fraud Probability + Reasoning
 ```
 ## 🧠 Why Isolation Forest?
 
-Isolation Forest was chosen because fraud detection is inherently an
-**anomaly detection problem**.
+Multiple anomaly detection approaches were experimented with during development.
 
-It works well for this use case because:
-- It does not require labeled data, which is common in real fraud systems
-- It handles highly imbalanced datasets effectively
-- It scales efficiently to large volumes of transactions
-- It works naturally with tabular financial features
-- It produces an anomaly score that can be converted into a fraud probability
+**Isolation Forest was chosen for the final system because:**
+- It performed **most consistently** on validation data
+- It scales well to large transaction volumes
+- It works naturally with **tabular financial features**
+- It provides a clear anomaly score that can be converted into a fraud probability
 
-Overall, Isolation Forest provided the best balance between
-**performance, simplicity, and explainability** for this project.
+Rather than overengineering, the final system uses **one strong, explainable model**.
 
 ---
 
