@@ -4,6 +4,7 @@
     "threshold_value": -3.866395707794541e-17
   },
   "one_class_svm": {
+    "threshold_type": "percentile",
     "percentile": 1,
     "threshold_value": -0.00011051983494503758
   },
