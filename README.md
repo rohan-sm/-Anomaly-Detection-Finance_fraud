@@ -122,25 +122,20 @@ Rather than overengineering, the final system uses **one strong, explainable mod
 #### Request
 ```json
 {
-  "amount": 4500,
-  "avg_amount_24h": 1200,
-  "txn_count_1h": 6,
-  "hour": 2,
-  "location_change": 1,
-  "device_change": 1
+  "customer_id": "string",
+  "amount": 0,
+  "timestamp": "2026-03-11T17:22:55.982Z",
+  "hour": 0,
+  "distance_from_home": 0
 }
 ```
-## Responce
+## Response
 ```json
 {
   "fraud_probability": 0.83,
+  "fraud_score": 0.1234,
   "is_fraud": true,
-  "reasoning": [
-    "Transaction amount deviates from user's normal spending",
-    "Unusual transaction time detected",
-    "High transaction velocity observed",
-    "Isolation Forest anomaly score is high"
-  ]
+  "explanation": "Transaction shows anomalous behavior compared to customer's historical spending patterns (amount/velocity/location deviation)."
 }
 ```
 
