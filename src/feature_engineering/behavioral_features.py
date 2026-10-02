@@ -1,19 +1,7 @@
 import pandas as pd
 import numpy as np
-from math import radians, sin, cos, sqrt, atan2
 
-
-def haversine_km(lat1, lon1, lat2, lon2):
-    R = 6371
-    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-
-    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-    return R * c
+from src.utils.geo_utils import haversine_distance as haversine_km
 
 
 def add_behavioral_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -59,14 +47,15 @@ def add_behavioral_features(df: pd.DataFrame) -> pd.DataFrame:
 
     travel_distance = [
         haversine_km(pl, plo, cl, clo)
-        if not pd.isna(pl) else 0
+        if not pd.isna(pl) else 0.0
         for pl, plo, cl, clo in zip(
             prev_lat, prev_long,
             df["merchant_lat"], df["merchant_long"]
         )
     ]
+    travel_distance = np.asarray(travel_distance, dtype=float)
 
-    time_diff_hours = df["time_since_last_txn_sec"] / 3600
+    time_diff_hours = df["time_since_last_txn_sec"].to_numpy(dtype=float) / 3600
 
     df["travel_speed_kmh"] = np.divide(
         travel_distance,

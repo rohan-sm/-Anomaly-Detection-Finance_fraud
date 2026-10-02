@@ -22,15 +22,15 @@ def main():
 
     print("[1/6] Generating customers...")
     customers = generate_customers()
-    print(f"    → {len(customers)} customers created")
+    print(f"    -> {len(customers)} customers created")
 
     print("[2/6] Generating merchants...")
     merchants = generate_merchants()
-    print(f"    → {len(merchants)} merchants created")
+    print(f"    -> {len(merchants)} merchants created")
 
     print("[3/6] Simulating normal transactions...")
     df = simulate_transactions(customers, merchants)
-    print(f"    → {len(df)} transactions simulated")
+    print(f"    -> {len(df)} transactions simulated")
 
     print("[4/6] Injecting fraud patterns...")
     df = inject_card_cloning(df)
@@ -53,10 +53,10 @@ def main():
 
     print("[6/6] Saving dataset...")
 
-    output_path = RAW_DATA_DIR / "transactions.csv"
+    output_path = RAW_DATA_DIR / "transactions_raw.csv"
     df.to_csv(output_path, index=False)
 
-    print(f"\n✅ Dataset successfully saved to:")
+    print(f"\n[OK] Dataset successfully saved to:")
     print(f"   {output_path}")
     
     print(" DATASET GENERATION COMPLETE ")

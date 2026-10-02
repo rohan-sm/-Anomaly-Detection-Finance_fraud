@@ -1,9 +1,21 @@
-numpy
-pandas
-scikit-learn
-fastapi
-uvicorn
-geopy
-matplotlib
-joblib
-tensorflow
+# Core numerics
+numpy==2.4.0
+pandas==2.3.3
+scipy==1.16.3
+
+# Modelling
+scikit-learn==1.8.0
+joblib==1.5.3
+tensorflow==2.20.0
+
+# API
+fastapi==0.128.0
+pydantic==2.12.5
+uvicorn==0.40.0
+
+# Analysis
+matplotlib==3.10.8
+
+# Testing
+pytest==8.3.4
+httpx==0.28.1

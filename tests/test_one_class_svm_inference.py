@@ -1,56 +1,47 @@
-import json
-import pandas as pd
 import joblib
 
 from src.models.one_class_svm import run_one_class_svm
+from src.utils.config import MODELS_DIR
+
+MIN_ANOMALY_RATE = 0.005
+MAX_ANOMALY_RATE = 0.02
 
 
-def test_one_class_svm_inference():
-    
-    # Load artifacts
-    scaler = joblib.load("models/standard_scaler_v1.pkl")
-    svm_model = joblib.load("models/one_class_svm_v1.pkl")
+def test_one_class_svm_inference(contract, scaler, features_frame):
+    model = joblib.load(MODELS_DIR / "one_class_svm_v1.pkl")
+    features = contract["features"]
+    threshold = contract["thresholds"]["one_class_svm"]["threshold_value"]
 
-    with open("models/model_features_v1.json") as f:
-        FEATURES = json.load(f)["features"]
+    X_scaled = scaler.transform(features_frame[features])
 
-    with open("models/thresholds_v1.json") as f:
-        THRESHOLD = json.load(f)["one_class_svm"]["threshold_value"]
+    scores, flags = run_one_class_svm(model, X_scaled, threshold)
 
-    
-    # Load data
-    df = pd.read_csv("data/processed/transactions_features.csv")
-
-    X = df[FEATURES]
-    X_scaled = scaler.transform(X)
-
-    # Run SVM inference
-    scores, flags = run_one_class_svm(
-        svm_model,
-        X_scaled,
-        THRESHOLD
-    )
-
-    # Assertions (sanity checks)
-    assert len(scores) == len(df)
-    assert len(flags) == len(df)
+    assert len(scores) == len(features_frame)
+    assert len(flags) == len(features_frame)
 
     anomaly_rate = flags.mean()
-    print("One-Class SVM anomaly rate:", anomaly_rate)
-
-    # Should be close to nu (~1%)
-    assert 0.005 <= anomaly_rate <= 0.02
-
-    # Inspect top anomalies
-    df["svm_score"] = scores
-    df["svm_flag"] = flags
-
-    print("\nTop 10 SVM anomalies:")
-    print(
-        df.sort_values("svm_score")
-        .head(10)[FEATURES + ["svm_score"]]
+    assert MIN_ANOMALY_RATE <= anomaly_rate <= MAX_ANOMALY_RATE, (
+        f"anomaly rate {anomaly_rate:.4%} outside "
+        f"[{MIN_ANOMALY_RATE:.1%}, {MAX_ANOMALY_RATE:.1%}]"
     )
 
 
-if __name__ == "__main__":
-    test_one_class_svm_inference()
+def test_one_class_svm_scores_are_oriented(contract, scaler, features_frame):
+    """`decision_function` is lower-is-anomalous for the SVM too.
+
+    Pins the sign convention shared by `src/models/isolation_forest.py` and
+    `src/models/one_class_svm.py`; `app/model_loader.py` negates to match.
+    """
+    model = joblib.load(MODELS_DIR / "one_class_svm_v1.pkl")
+    features = contract["features"]
+
+    scores, flags = run_one_class_svm(
+        model,
+        scaler.transform(features_frame[features]),
+        contract["thresholds"]["one_class_svm"]["threshold_value"],
+    )
+
+    flagged_scores = scores[flags]
+    unflagged_scores = scores[~flags]
+
+    assert flagged_scores.max() < unflagged_scores.min()

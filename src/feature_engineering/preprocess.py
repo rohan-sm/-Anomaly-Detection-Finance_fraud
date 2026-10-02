@@ -1,8 +1,10 @@
+import os
+
 import pandas as pd
 import numpy as np
-from pathlib import Path
 
 from src.feature_engineering.behavioral_features import add_behavioral_features
+from src.utils.config import RAW_DATA_DIR, PROCESSED_DATA_DIR
 
 
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -45,14 +47,10 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-# ---------------- BATCH PIPELINE (UNCHANGED) ----------------
+# ---------------- BATCH PIPELINE ----------------
 
-BASE_DIR = Path(__file__).resolve()
-while BASE_DIR.name != "fraud-anamoly-detection":
-    BASE_DIR = BASE_DIR.parent
-
-RAW_PATH = BASE_DIR / "data" / "raw" / "transactions_raw.csv"
-OUT_PATH = BASE_DIR / "data" / "processed" / "transactions_features.csv"
+RAW_PATH = RAW_DATA_DIR / "transactions_raw.csv"
+OUT_PATH = PROCESSED_DATA_DIR / "transactions_features.csv"
 
 
 def run_feature_engineering():
@@ -61,8 +59,9 @@ def run_feature_engineering():
     df = pd.read_csv(RAW_PATH)
     df = build_features(df)
 
+    os.makedirs(OUT_PATH.parent, exist_ok=True)
     df.to_csv(OUT_PATH, index=False)
-    print(f"[SUCCESS] Saved → {OUT_PATH}")
+    print(f"[SUCCESS] Saved -> {OUT_PATH}")
 
 
 if __name__ == "__main__":

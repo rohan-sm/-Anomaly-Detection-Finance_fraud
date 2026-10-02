@@ -1,61 +1,66 @@
-import json
-import pandas as pd
 import joblib
 
 from src.models.isolation_forest import run_isolation_forest
+from src.models.evaluate import ranking_auc
+from src.utils.config import MODELS_DIR
+
+# Operating-point band the shipped artifact must stay inside. Widening the
+# contamination without retraining is a silent behavioural change, so it is
+# pinned here.
+MIN_ANOMALY_RATE = 0.005
+MAX_ANOMALY_RATE = 0.02
 
 
-def test_isolation_forest_inference():
+def test_isolation_forest_inference(contract, scaler, features_frame, labels):
+    model = joblib.load(MODELS_DIR / "isolation_forest_v1.pkl")
+    features = contract["features"]
+    threshold = contract["thresholds"]["isolation_forest"]["threshold_value"]
 
-    # Load artifacts
-    scaler = joblib.load("models/standard_scaler_v1.pkl")
-    iso_model = joblib.load("models/isolation_forest_v1.pkl")
+    X_scaled = scaler.transform(features_frame[features])
 
-    with open("models/model_features_v1.json") as f:
-        features = json.load(f)["features"]
+    scores, flags = run_isolation_forest(model, X_scaled, threshold)
 
-    with open("models/thresholds_v1.json") as f:
-        threshold = json.load(f)["isolation_forest"]["threshold_value"]
-
-    # Load data
-    df = pd.read_csv("data/processed/transactions_features.csv")
-
-    X = df[features]
-    X_scaled = scaler.transform(X)
-
-    # Run inference
-    scores, flags = run_isolation_forest(
-        iso_model,
-        X_scaled,
-        threshold
-    )
-
-    # Assertions (THIS makes it a test)
-    assert len(scores) == len(df)
-    assert len(flags) == len(df)
+    assert len(scores) == len(features_frame)
+    assert len(flags) == len(features_frame)
 
     anomaly_rate = flags.mean()
-    print("Anomaly rate:", anomaly_rate)
-
-    # Expect ~1% anomalies
-    assert 0.005 <= anomaly_rate <= 0.02
-
-    # Attach & inspect
-    df["iso_score"] = scores
-    df["iso_flag"] = flags
-
-    print("\nTop 10 most anomalous transactions:")
-    print(
-        df.sort_values("iso_score")
-        .head(10)[features + ["iso_score"]]
-    )
-
-    # Save output (optional but useful)
-    df.to_csv(
-        "data/processed/transactions_with_iso_inference.csv",
-        index=False
+    assert MIN_ANOMALY_RATE <= anomaly_rate <= MAX_ANOMALY_RATE, (
+        f"anomaly rate {anomaly_rate:.4%} outside "
+        f"[{MIN_ANOMALY_RATE:.1%}, {MAX_ANOMALY_RATE:.1%}]"
     )
 
 
-if __name__ == "__main__":
-    test_isolation_forest_inference()
+def test_isolation_forest_ranking_auc(contract, scaler, features_frame, labels):
+    """Guard the documented ranking ROC-AUC.
+
+    `decision_function` is lower-is-anomalous, so the score must be negated.
+    This pins the number quoted in the model comparison notebook.
+    """
+    model = joblib.load(MODELS_DIR / "isolation_forest_v1.pkl")
+    features = contract["features"]
+
+    scores, _ = run_isolation_forest(
+        model,
+        scaler.transform(features_frame[features]),
+        contract["thresholds"]["isolation_forest"]["threshold_value"],
+    )
+
+    auc = ranking_auc(labels, scores)
+    assert 0.58 <= auc <= 0.62, f"ranking ROC-AUC drifted to {auc:.4f}"
+
+
+def test_isolation_forest_beats_random(contract, scaler, features_frame, labels):
+    """A model at or below 0.5 AUC is no better than random ranking.
+
+    Guards the core premise: the engineered features actually carry fraud signal.
+    """
+    model = joblib.load(MODELS_DIR / "isolation_forest_v1.pkl")
+    features = contract["features"]
+
+    scores, _ = run_isolation_forest(
+        model,
+        scaler.transform(features_frame[features]),
+        contract["thresholds"]["isolation_forest"]["threshold_value"],
+    )
+
+    assert ranking_auc(labels, scores) > 0.5

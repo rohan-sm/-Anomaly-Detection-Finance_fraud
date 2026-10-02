@@ -1,56 +1,48 @@
-import json
-import pandas as pd
-import joblib
-
-from src.models.autoencoder import run_autoencoder
+import numpy as np
+import pytest
 from tensorflow.keras.models import load_model
 
+from src.models.autoencoder import run_autoencoder
+from src.utils.config import MODELS_DIR
 
-def test_autoencoder_inference():
-    
-    # Load artifacts
-    scaler = joblib.load("models/standard_scaler_v1.pkl")
-    ae_model = load_model("models/autoencoder_v1.keras")
+MIN_ANOMALY_RATE = 0.005
+MAX_ANOMALY_RATE = 0.02
 
-    with open("models/model_features_v1.json") as f:
-        FEATURES = json.load(f)["features"]
 
-    with open("models/thresholds_v1.json") as f:
-        AE_THRESHOLD = json.load(f)["autoencoder"]["threshold_value"]
+def test_autoencoder_inference(contract, scaler, features_frame):
+    model = load_model(MODELS_DIR / "autoencoder_v1.keras")
+    features = contract["features"]
+    threshold = contract["thresholds"]["autoencoder"]["threshold_value"]
 
-    # Load data
-    df = pd.read_csv("data/processed/transactions_features.csv")
+    X_scaled = scaler.transform(features_frame[features])
 
-    X = df[FEATURES]
-    X_scaled = scaler.transform(X)
+    errors, flags = run_autoencoder(model, X_scaled, threshold)
 
-    # Run Autoencoder inference
-    errors, flags = run_autoencoder(
-        ae_model,
-        X_scaled,
-        AE_THRESHOLD
-    )
-
-    # Sanity checks
-    assert len(errors) == len(df)
-    assert len(flags) == len(df)
+    assert len(errors) == len(features_frame)
+    assert len(flags) == len(features_frame)
 
     anomaly_rate = flags.mean()
-    print("Autoencoder anomaly rate:", anomaly_rate)
-
-    # Expect around 1%
-    assert 0.005 <= anomaly_rate <= 0.02
-
-    # Inspect top anomalies
-    df["ae_score"] = errors
-    df["ae_flag"] = flags
-
-    print("\nTop 10 Autoencoder anomalies:")
-    print(
-        df.sort_values("ae_score", ascending=False)
-        .head(10)[FEATURES + ["ae_score"]]
+    assert MIN_ANOMALY_RATE <= anomaly_rate <= MAX_ANOMALY_RATE, (
+        f"anomaly rate {anomaly_rate:.4%} outside "
+        f"[{MIN_ANOMALY_RATE:.1%}, {MAX_ANOMALY_RATE:.1%}]"
     )
 
 
-if __name__ == "__main__":
-    test_autoencoder_inference()
+def test_autoencoder_threshold_matches_declared_percentile(
+    contract, scaler, features_frame
+):
+    """Regression: the stored threshold must be the percentile it declares.
+
+    `thresholds_v1.json` claimed `"percentile": 99` while storing the 99.8th
+    percentile of reconstruction error, which flagged only 0.2% of rows instead
+    of the intended 1%.
+    """
+    model = load_model(MODELS_DIR / "autoencoder_v1.keras")
+    features = contract["features"]
+    ae_config = contract["thresholds"]["autoencoder"]
+
+    X_scaled = scaler.transform(features_frame[features])
+    errors, _ = run_autoencoder(model, X_scaled, threshold=0.0)
+
+    expected = float(np.percentile(errors, ae_config["percentile"]))
+    assert ae_config["threshold_value"] == pytest.approx(expected, rel=1e-6)
